@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'IndustrialTwin Dashboards'
+    orgId: 1
+    folder: 'Industrial Health Monitoring'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards

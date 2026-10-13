@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # 1. Eclipse Mosquitto MQTT Broker
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: industrial_twin_mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 mosquitto_sub -t '$$SYS/#' -c -i healthcheck -i test || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 2. MongoDB Time-Series Database
+  mongodb:
+    image: mongo:7.0
+    container_name: industrial_twin_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: industrial_twin
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 3. FastAPI Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: industrial_twin_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=IndustrialTwin
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB_NAME=industrial_twin
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
+      - ML_MODEL_PATH=ml/models/health_model.joblib
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+
+  # 4. React Digital Twin Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: industrial_twin_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # 5. Grafana Operational Analytics Platform
+  grafana:
+    image: grafana/grafana-oss:10.4.0
+    container_name: industrial_twin_grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin_secure_password}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - backend
+      - mongodb
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  mongodb_data:
+  grafana_data:

@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Environment variables
+.env
+!.env.example
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / React Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Data & Models
+ml/models/*.joblib
+ml/models/*.pkl
+data/
+*.log
+
+# Docker data mounts
+mosquitto/data/
+mosquitto/log/
+grafana/data/
+mongodb_data/
