@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # IndustrialTwin - Digital Twin for Industrial Equipment Health Monitoring
 
 **IndustrialTwin** is an end-to-end industrial equipment health monitoring platform featuring a physics-based motor telemetry simulator, MQTT message broker, FastAPI ingestion service, MongoDB time-series storage, scikit-learn ML anomaly detection & composite health scoring, Grafana dashboards, and an interactive 2D/3D Digital Twin web UI.
@@ -166,3 +167,7 @@ To switch from the software simulator to real industrial sensors:
 
 ## ⚠️ Known Limitations
 - **Synthetic Data Disclaimer**: Model evaluation metrics reflect simulation behavior and verify end-to-end pipeline mechanics. Real-world predictive maintenance deployment requires training on physical sensor data from actual motor degradation trials.
+=======
+# Industrial_twin
+An IoT and Machine Learning-based Industrial Digital Twin for real-time motor health monitoring, MQTT telemetry, anomaly detection, and 3D visualization using React, FastAPI, and MongoDB.
+>>>>>>> 4f78335e760ba757767f7627e7ff177e38627308
