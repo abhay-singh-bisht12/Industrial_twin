@@ -1,173 +1,199 @@
-<<<<<<< HEAD
-# IndustrialTwin - Digital Twin for Industrial Equipment Health Monitoring
+# IndustrialTwin — Industrial Equipment Health Monitoring
 
-**IndustrialTwin** is an end-to-end industrial equipment health monitoring platform featuring a physics-based motor telemetry simulator, MQTT message broker, FastAPI ingestion service, MongoDB time-series storage, scikit-learn ML anomaly detection & composite health scoring, Grafana dashboards, and an interactive 2D/3D Digital Twin web UI.
+An IoT and Machine Learning-based Digital Twin platform designed to monitor industrial motor health, visualize real-time telemetry, identify abnormal operating conditions, and support predictive maintenance.
 
----
+## Overview
 
-## 🏗️ System Architecture
+IndustrialTwin creates a software-based digital representation of industrial equipment. It receives motor telemetry from a simulator or a compatible IoT device, processes the data through a backend monitoring pipeline, and displays equipment status through an interactive 3D dashboard.
 
-```
- +-----------------------------------------------------------------------------------+
- |                                   IoT Telemetry                                   |
- |  +--------------------------+                      +---------------------------+  |
- |  | Python Motor Simulator   | ---(MQTT Telemetry)->| Eclipse Mosquitto Broker  |  |
- |  | (Physics & Fault Engine) |                      | (Ports 1883 / 9001 WS)    |  |
- |  +--------------------------+                      +-------------+-------------+  |
- +------------------------------------------------------------------|----------------+
-                                                                    |
-                                                                (Publish)
-                                                                    v
- +------------------------------------------------------------------|----------------+
- |                                  Backend & ML Engine             |                |
- |  +---------------------------------------------------------------+-------------+  |
- |  |                        FastAPI Application                                  |  |
- |  |  +---------------------+   +---------------------+   +-------------------+  |  |
- |  |  | MQTT Consumer Task  |-->| ML Inference Engine |-->| WebSocket Server  |  |  |
- |  |  | (Schema Validation) |   | (IsolationForest &  |   | (Realtime Stream) |  |  |
- |  |  +----------+----------+   | Health Scoring)     |   +---------+---------+  |  |
- |  |             |              +----------+----------+             |            |  |
- |  +-------------|-------------------------|------------------------|------------+  |
- |                v                         v                        v               |
- |       +------------------------------------------------------------------+        |
- |       |                       MongoDB Database                           |        |
- |       |            (Telemetry Snapshots & Anomaly Alerts)                |        |
- |       +------------------------------------------------------------------+        |
- +-----------------------------------------------------------------------------------+
-```
+The project aims to help identify abnormal temperature, vibration, speed, and electrical readings before they lead to equipment failure.
 
----
+## Key Features
 
-## 🤖 Machine Learning & Health Scoring Engine (Phase 3)
+- **3D Digital Twin Dashboard:** Interactive motor visualization using React and Three.js.
+- **Real-Time Telemetry:** Motor sensor data delivered through MQTT and WebSocket communication.
+- **Machine Health Index:** Health score and status indicators based on equipment telemetry.
+- **Anomaly Detection:** Machine learning-based detection of unusual operating patterns.
+- **Fault Simulation:** Simulated operating conditions for testing monitoring behavior.
+- **Telemetry Storage:** MongoDB integration for storing equipment readings.
+- **REST API:** FastAPI backend with API documentation.
+- **ESP32 Integration:** Firmware and sensor integration planned for physical-device testing.
+- **Monitoring:** Grafana integration for operational monitoring.
 
-### 1. Synthetic Dataset Generator
-Generated via `ml/generate_dataset.py` with reproducible seed physics simulation across dynamic mechanical load profiles (40% to 115% load).
-- **Distribution**: 70% Normal, 10% Overheating, 10% Bearing Wear, 10% Electrical Fault.
-- **Dataset Location**: `ml/data/motor_telemetry_dataset.csv`.
+## Technology Stack
 
-```powershell
-.\backend\venv\Scripts\python.exe -m ml.generate_dataset --samples 10000 --seed 42
-```
+| Component | Technologies |
+|---|---|
+| Frontend | React, Vite, Tailwind CSS |
+| 3D Visualization | Three.js |
+| Backend | Python, FastAPI |
+| Communication | MQTT, WebSockets |
+| Database | MongoDB |
+| Machine Learning | Scikit-learn, Isolation Forest |
+| Monitoring | Grafana |
+| Hardware Prototype | ESP32, MPU6050, DS18B20 |
+| Testing | Pytest, Vitest |
 
-### 2. ML Model Training & Pipeline
-Trained via `ml/train_model.py` using **Isolation Forest** on scaled features (`StandardScaler`).
-- **Extracted Features**: `temperature`, `vibration_rms`, `vibration_peak`, `rpm`, `current_draw`, `voltage`, `load_percentage`, `power_factor_approx`, `vibration_crest_factor`.
-- **Evaluation Metrics (Hold-out Test Set)**:
-  - **ROC-AUC**: `0.9249`
-  - **Accuracy**: `79.45%`
-- **Artifacts Saved**: `ml/models/health_model.joblib` and `ml/models/model_metadata.json`.
+## System Architecture
 
-```powershell
-.\backend\venv\Scripts\python.exe -m ml.train_model --seed 42
+```text
+Motor Simulator / ESP32 Sensors
+              |
+              v
+          MQTT Broker
+              |
+              v
+       FastAPI Backend
+          /       \
+         v         v
+     MongoDB    ML / Health Scoring
+                    |
+                    v
+              WebSocket API
+                    |
+                    v
+          React + Three.js UI
 ```
 
-### 3. Composite Machine Health Scoring Engine (`0 - 100`)
-Computes composite health score:
+The simulator generates sample motor telemetry for software testing. Physical ESP32 sensor integration requires compatible hardware and validation.
 
-$$\text{Composite Health} = 100 - (\text{Thermal Penalty} + \text{Vibration Penalty} + \text{Electrical Penalty} + \text{RPM Slip Penalty} + \text{ML Anomaly Penalty})$$
+## Telemetry Parameters
 
-#### Health Tiers:
-- **HEALTHY** (Score $\ge 80.0$)
-- **WARNING** (Score $50.0 - 79.9$)
-- **CRITICAL** (Score $< 50.0$)
+The platform is designed to work with motor parameters such as:
 
-### 4. Digital Twin Frontend (Phase 4)
-- **Interactive 2D & 3D Web Dashboard**: Built with React, Vite, Tailwind CSS, Lucide Icons, and Three.js.
-- **3D Motor Renderer (`MotorDigitalTwin3D.jsx`)**: Real-time 3D visualization of motor status with dynamic rotation speeds, thermal glow shaders, fault particle effects, and status lighting.
-- **Live WebSocket Feed & State Controls**: Real-time telemetry gauge updates, sparkline time-series trends, ML anomaly score alerts, and direct UI fault mode injection buttons.
+- Temperature
+- Vibration RMS and peak
+- Shaft speed (RPM)
+- Current draw
+- Voltage
+- Mechanical load
+- Operating state
 
-### 5. Production Packaging & Grafana Provisioning (Phase 5)
-- **Grafana Dashboard Provisioning**: Automated datasource (`datasources.yml`) and dashboard (`industrial_twin.json`) provisioning for operations teams monitoring real-time telemetry, ML scores, and alerts.
-- **Docker Compose Orchestration**: Containerized setup for `mosquitto`, `mongodb`, `backend`, `frontend`, and `grafana` with health checks and volume persistence.
+## Getting Started
 
-### 6. Physical ESP32 Sensor Integration (Phase 6)
-- **Physical Sensor Hardware Integration**: Production C++ firmware (`hardware/esp32_industrial_twin.ino`) and complete connection guide (`hardware/ESP32_SENSOR_GUIDE.md`) for real ESP32 microcontrollers with MPU6050 vibration/acceleration and DS18B20 surface temperature sensors.
-- **Auto-Reconnect & Telemetry Protocol**: Includes Wi-Fi and MQTT auto-reconnect handling, serial debugging logs, MQTT control callback for remote state injection, and 100% Pydantic-compliant telemetry payload delivery over `industrial/motor/{MOTOR_ID}/telemetry`.
+### Prerequisites
 
----
+Install the following before running the project:
 
-## 📡 API Endpoints
+- Python compatible with the backend environment
+- Node.js and npm
+- MongoDB
+- Git
 
-### ML & Machine Health Endpoints (`/api/v1/ml/`)
-- `GET /api/v1/ml/health?motor_id=motor-01`: Current machine health evaluation, tier, degradation reasons, and penalty breakdown.
-- `GET /api/v1/ml/health/history?motor_id=motor-01&limit=50`: Historical health score time-series data.
-- `GET /api/v1/ml/anomalies`: Logged anomaly alert records.
-- `GET /api/v1/ml/model-info`: Active ML model metadata, versioning, feature list, and evaluation metrics.
+### 1. Clone the repository
 
-### Telemetry Endpoints (`/api/v1/telemetry/`)
-- `GET /api/v1/telemetry/recent?motor_id=motor-01&limit=50`: Recent telemetry snapshots.
-- `GET /api/v1/telemetry/status?motor_id=motor-01`: Motor operational status summary.
-- `GET /api/v1/telemetry/stats`: Metric averages and max values over configurable time window.
-- `POST /api/v1/telemetry/control`: Send control action to simulator via MQTT.
-- `WS /api/v1/ws/telemetry`: Live WebSocket streaming endpoint.
-
----
-
-## 🚀 How to Run the Complete System
-
-### Option A: Local Development Setup (Windows)
-
-#### 1. Run Complete Automated Test Suite (39 Tests Total: 36 Python + 3 Vitest)
-```powershell
-# Python Tests (Backend, ML, Simulator & ESP32 Schema Compatibility)
-.\backend\venv\Scripts\python.exe -m pytest
-
-# Frontend Tests (React / Vitest)
-cd frontend
-npm test
+```bash
+git clone https://github.com/YOUR_USERNAME/Industrial_twin.git
+cd Industrial_twin
 ```
 
-#### 2. Start Embedded MQTT Broker (Ports 1883 TCP / 9001 WebSockets)
+Replace `YOUR_USERNAME` with your GitHub username.
+
+### 2. Configure environment variables
+
+Create a local `.env` file using the project's environment template, if provided. Configure the MongoDB connection, MQTT broker, backend settings, and other required values.
+
+Do not commit real passwords, API keys, or private secrets.
+
+### 3. Start the MQTT broker
+
+Open a terminal in the project root:
+
 ```powershell
 .\backend\venv\Scripts\python.exe broker_service.py
 ```
 
-#### 3. Start FastAPI Backend Service
+If you cloned the repository on a new machine, create and configure the Python virtual environment and install the project's backend dependencies first.
+
+### 4. Start the backend
+
+Open a second terminal:
+
 ```powershell
 cd backend
 .\venv\Scripts\python.exe -m app.main
 ```
 
-#### 4. Start React Digital Twin Dashboard
+Backend API: http://localhost:8000
+
+API documentation: http://localhost:8000/docs
+
+### 5. Start the frontend
+
+Open a third terminal:
+
 ```powershell
 cd frontend
+npm install
 npm run dev
 ```
 
-#### 5. Run Motor Telemetry Simulator (Demo Mode)
+Open the local URL printed by Vite in the terminal. In the current development setup, the frontend runs at:
+
+http://localhost:3000
+
+### 6. Start the motor simulator
+
+Open a fourth terminal in the project root:
+
 ```powershell
 .\backend\venv\Scripts\python.exe -m simulator.main --demo --interval 1.0
 ```
 
----
+This generates simulated motor telemetry at approximately one-second intervals for development and demonstration.
 
-### Option B: Production Docker Compose Deployment
+**Note:** The commands above assume the project's virtual environment and configuration are already set up. On a fresh installation, install the backend dependencies and configure MongoDB and MQTT before starting the services.
 
-Launch all services (Mosquitto MQTT, MongoDB, FastAPI Backend, React Frontend, Grafana):
-```bash
-docker-compose up --build -d
+## MQTT Topics
+
+| Purpose | Topic |
+|---|---|
+| Motor telemetry | `industrial/motor/+/telemetry` |
+| Motor alerts | `industrial/motor/+/alerts` |
+| Motor control | `industrial/motor/+/control` |
+
+## Example Telemetry Payload
+
+```json
+{
+  "motor_id": "esp32-motor-01",
+  "temperature": 45.5,
+  "vibration_rms": 1.25,
+  "vibration_peak": 0.85,
+  "rpm": 1480.0,
+  "current_draw": 28.5,
+  "voltage": 400.0,
+  "load_percentage": 75.0,
+  "operating_state": "NORMAL"
+}
 ```
 
-- **Digital Twin UI**: `http://localhost:3000`
-- **FastAPI Documentation**: `http://localhost:8000/docs`
-- **Grafana Monitoring Dashboard**: `http://localhost:3001` (Credentials: `admin`/`admin_secure_password`)
-- **MQTT Broker**: Ports `1883` (TCP) and `9001` (WebSockets)
+Values are illustrative sample data, not measurements from a real industrial motor.
 
----
+## Project Status
 
-## 🛠️ Physical ESP32 Hardware Integration
+- Software dashboard and 3D visualization: implemented.
+- MQTT and FastAPI telemetry pipeline: implemented and tested in the development environment.
+- MongoDB integration: implemented.
+- ML anomaly detection and health scoring: included in the software pipeline.
+- Simulator-based demonstration: available.
+- Physical ESP32 and sensor validation: pending hardware testing.
 
-To switch from the software simulator to real industrial sensors:
-1. Refer to [hardware/ESP32_SENSOR_GUIDE.md](file:///d:/IndustrialTwin/hardware/ESP32_SENSOR_GUIDE.md) for pinout mappings and text wiring diagrams.
-2. Flash [hardware/esp32_industrial_twin.ino](file:///d:/IndustrialTwin/hardware/esp32_industrial_twin.ino) onto an ESP32 microcontroller using Arduino IDE or PlatformIO.
-3. Configure Wi-Fi credentials (`WIFI_SSID`, `WIFI_PASS`) and MQTT broker IP address (`MQTT_BROKER_IP`).
-4. Telemetry from physical MPU6050 and DS18B20 sensors will flow seamlessly into the backend, ML engine, Digital Twin UI, and Grafana dashboard.
+## Future Improvements
 
----
+- Validate telemetry with physical sensors and an ESP32.
+- Evaluate anomaly detection with real-world motor datasets.
+- Improve alerting and historical trend analysis.
+- Add secure device provisioning and authenticated communication.
+- Validate the system under real equipment operating conditions.
 
-## ⚠️ Known Limitations
-- **Synthetic Data Disclaimer**: Model evaluation metrics reflect simulation behavior and verify end-to-end pipeline mechanics. Real-world predictive maintenance deployment requires training on physical sensor data from actual motor degradation trials.
-=======
-# Industrial_twin
-An IoT and Machine Learning-based Industrial Digital Twin for real-time motor health monitoring, MQTT telemetry, anomaly detection, and 3D visualization using React, FastAPI, and MongoDB.
->>>>>>> 4f78335e760ba757767f7627e7ff177e38627308
+## Disclaimer
+
+IndustrialTwin is a development and monitoring prototype. Simulator results and ML predictions are not a substitute for certified industrial safety systems or professional equipment diagnostics. Do not connect development hardware directly to hazardous motor power circuits.
+
+## Author
+
+**Abhay Singh Bisht**
+
+GitHub: https://github.com/YOUR_USERNAME
+
